@@ -82,22 +82,34 @@ def on_message(client, userdata, msg):
 # using MQTT version 5 here, for 3.1.1: MQTTv311, 3.1: MQTTv31
 # userdata is user defined data of any type, updated by user_data_set()
 # client_id is the given name of the client
-client = paho.Client(callback_api_version=paho.CallbackAPIVersion.VERSION1, client_id="", userdata=None, protocol=paho.MQTTv5)
-client.on_connect = on_connect
+client1 = paho.Client(callback_api_version=paho.CallbackAPIVersion.VERSION1, client_id="Client1", userdata=None, protocol=paho.MQTTv5)
+client2 = paho.Client(callback_api_version=paho.CallbackAPIVersion.VERSION1, client_id="Client2", userdata=None, protocol=paho.MQTTv5)
 
+client1.on_connect = on_connect
+client2.on_connect = on_connect
 
 # enable TLS for secure connection
-client.tls_set(tls_version=mqtt.client.ssl.PROTOCOL_TLS)
+client1.tls_set(tls_version=mqtt.client.ssl.PROTOCOL_TLS)
+client2.tls_set(tls_version=mqtt.client.ssl.PROTOCOL_TLS)
+
 # set username and password
-client.username_pw_set("{YOUR USERNAME}", "{YOUR PASSWORD}")
+client1.username_pw_set("beans", "Beans4Life")
+client2.username_pw_set("beans", "Beans4Life")
+
 # connect to HiveMQ Cloud on port 8883 (default for MQTT)
-client.connect("{YOUR URL}", 8883)
+client1.connect("5e411a7e06134539ac30e0ebb5aff733.s1.eu.hivemq.cloud", 8883)
+client2.connect("5e411a7e06134539ac30e0ebb5aff733.s1.eu.hivemq.cloud", 8883)
+
 
 
 # setting callbacks, use separate functions like above for better visibility
-client.on_subscribe = on_subscribe
-client.on_message = on_message
-client.on_publish = on_publish
+client1.on_subscribe = on_subscribe
+client1.on_message = on_message
+client1.on_publish = on_publish
+
+client2.on_subscribe = on_subscribe
+client2.on_message = on_message
+client2.on_publish = on_publish
 
 
 # subscribe to all topics of encyclopedia by using the wildcard "#"

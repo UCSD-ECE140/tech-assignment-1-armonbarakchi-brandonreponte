@@ -57,6 +57,7 @@ def on_message(client, userdata, msg):
     print("message: " + msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
 
 
+
 if __name__ == '__main__':
     load_dotenv(dotenv_path='./credentials.env')
     
