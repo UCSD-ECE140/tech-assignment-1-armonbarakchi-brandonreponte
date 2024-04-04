@@ -82,8 +82,6 @@ if __name__ == '__main__':
 
     lobby_name = "TestLobby"
     player_1 = "Player1"
-    player_2 = "Player2"
-    player_3 = "Player3"
 
     client.subscribe(f"games/{lobby_name}/lobby")
     client.subscribe(f'games/{lobby_name}/+/game_state')
@@ -92,20 +90,12 @@ if __name__ == '__main__':
     client.publish("new_game", json.dumps({'lobby_name':lobby_name,
                                             'team_name':'ATeam',
                                             'player_name' : player_1}))
-    
-    client.publish("new_game", json.dumps({'lobby_name':lobby_name,
-                                            'team_name':'BTeam',
-                                            'player_name' : player_2}))
-    
-    client.publish("new_game", json.dumps({'lobby_name':lobby_name,
-                                        'team_name':'BTeam',
-                                        'player_name' : player_3}))
 
     time.sleep(1) # Wait a second to resolve game start
     client.publish(f"games/{lobby_name}/start", "START")
-    client.publish(f"games/{lobby_name}/{player_1}/move", "UP")
-    client.publish(f"games/{lobby_name}/{player_2}/move", "DOWN")
-    client.publish(f"games/{lobby_name}/{player_3}/move", "DOWN")
+
+    step = input("Enter your move: ")
+    client.publish(f"games/{lobby_name}/{player_1}/move", step)
     client.publish(f"games/{lobby_name}/start", "STOP")
 
 
