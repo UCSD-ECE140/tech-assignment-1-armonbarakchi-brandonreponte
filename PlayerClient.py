@@ -55,6 +55,8 @@ def on_message(client, userdata, msg):
     """
 
     print("message: " + msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
+    if(msg.payload == "Game Over: All coins have been collected"):
+        client.publish(f"games/{lobby_name}/start", "STOP")
 
 
 
@@ -82,6 +84,7 @@ if __name__ == '__main__':
 
     lobby_name = "TestLobby"
     player_1 = "Player1"
+    player_2 = "Player2"
 
     client.subscribe(f"games/{lobby_name}/lobby")
     client.subscribe(f'games/{lobby_name}/+/game_state')
@@ -90,13 +93,20 @@ if __name__ == '__main__':
     client.publish("new_game", json.dumps({'lobby_name':lobby_name,
                                             'team_name':'ATeam',
                                             'player_name' : player_1}))
+    client.publish("new_game", json.dumps({'lobby_name': lobby_name,
+                                           'team_name': 'BTeam',
+                                           'player_name': player_2}))
+
 
     time.sleep(1) # Wait a second to resolve game start
     client.publish(f"games/{lobby_name}/start", "START")
 
-    step = input("Enter your move: ")
-    client.publish(f"games/{lobby_name}/{player_1}/move", step)
-    client.publish(f"games/{lobby_name}/start", "STOP")
+    while(True):
+        step1 = input("Enter your move: ")
+        step2 = input("Enter your move: ")
+        client.publish(f"games/{lobby_name}/{player_1}/move", step1)
+        client.publish(f"games/{lobby_name}/{player_2}/move", step2)
+
 
 
     client.loop_forever()
