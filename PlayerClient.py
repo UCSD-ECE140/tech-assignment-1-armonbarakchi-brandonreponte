@@ -53,18 +53,20 @@ def on_message(client, userdata, msg):
         :param userdata: userdata is set when initiating the client, here it is userdata=None
         :param msg: the message with topic and payload
     """
-
+    if msg.topic == f"games/{lobby_name}/{player}/game_state":
+        client.gamestate = json.loads(str(msg.payload)[2:-1])
     print("message: " + msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
 
+def pathfind():
+    print(client.gamestate["currentPosition"])
 
-
-if __name__ == '__main__':
-    load_dotenv(dotenv_path='./credentials.env')
+if __name__ == "__main__":
+    load_dotenv(dotenv_path="./credentials.env")
     
-    broker_address = os.environ.get('BROKER_ADDRESS')
-    broker_port = int(os.environ.get('BROKER_PORT'))
-    username = os.environ.get('USER_NAME')
-    password = os.environ.get('PASSWORD')
+    broker_address = os.environ.get("BROKER_ADDRESS")
+    broker_port = int(os.environ.get("BROKER_PORT"))
+    username = os.environ.get("USER_NAME")
+    password = os.environ.get("PASSWORD")
 
     player = input("Enter your name: ")
     client = paho.Client(callback_api_version=paho.CallbackAPIVersion.VERSION1, client_id=player, userdata=None, protocol=paho.MQTTv5)
@@ -82,19 +84,20 @@ if __name__ == '__main__':
     client.on_publish = on_publish # Can comment out to not print when publishing to topics
 
     lobby_name = "TestLobby"
+    client.gamestate = None
 
     client.subscribe(f"games/{lobby_name}/lobby")
-    client.subscribe(f'games/{lobby_name}/+/game_state')
-    client.subscribe(f'games/{lobby_name}/scores')
+    client.subscribe(f"games/{lobby_name}/{player}/game_state")
+    client.subscribe(f"games/{lobby_name}/scores")
 
-    client.publish("new_game", json.dumps({'lobby_name':lobby_name,
-                                            'team_name':'ATeam',
-                                            'player_name' : player}))
+    client.publish("new_game", json.dumps({"lobby_name":lobby_name,
+                                            "team_name":"ATeam",
+                                            "player_name" : player}))
 
     isStarting = True
     if input("Are you Hosting (Y) or Joining (any other input) the Game? ") != "Y":
         isStarting = False
-    
+
     while input("Join Game (Y)? ") != "Y":
         pass
 
@@ -103,7 +106,15 @@ if __name__ == '__main__':
         time.sleep(1) # Wait a second to resolve game start
         client.publish(f"games/{lobby_name}/start", "START")
     
+    client.loop_start()
+
     while True:
+        time.sleep(1) # Wait a second to resolve game state
         step = input("Enter your move (UP/DOWN/LEFT/RIGHT)? ")
-        client.publish(f"games/{lobby_name}/{player}/move", step)
-        print(step)
+        if step in ["UP", "DOWN", "LEFT", "RIGHT"]:
+            # pathfind()
+            client.publish(f"games/{lobby_name}/{player}/move", step)
+
+
+
+
