@@ -55,36 +55,45 @@ def on_message(client, userdata, msg):
         :param userdata: userdata is set when initiating the client, here it is userdata=None
         :param msg: the message with topic and payload
     """
-    if msg.topic == f"games/{lobby_name}/{player}/game_state":
+    if msg.topic == f"games/{lobby_name}/{player}/game_state" and client.pathfinding == False:
         client.gamestate = json.loads(str(msg.payload)[2:-1])
-        try:
-            match pathfind()[1]:        # get step from player position
-                case (1,2):
-                    step = "UP"
-                case (3,2):
-                    step = "DOWN"
-                case (2,1):
-                    step = "LEFT"
-                case (2,3):
-                    step = "RIGHT"
-                case _:
-                    pass
-        except:
+        path = pathfind()
+        print(path)
+
+        if path is not None and len(path) != 0:
+
+            client.pathfinding = True
+
+            while len(path) > 0:
+                step = path.pop(0)
+                client.face = ["UP", "RIGHT", "DOWN", "LEFT"].index(step)
+                print(step)
+                client.publish(f"games/{lobby_name}/{player}/move", step)
+
+            client.pathfinding = False
+
+        else:
+            
             vision = playerVision()
-            up = down = left = right = -25
-            if (vision[1][2] > -1):
-                up = vision[:2,:].sum()
-            if (vision[3][2] > -1):
-                down = vision[3:,:].sum()
-            if (vision[2][1] > -1):
-                left = vision[:,:2].sum()
-            if (vision[2][3] > -1):
-                right = vision[:,3:].sum()
 
-            direction = np.argmax(np.array([up, down, left, right]))
-            step = ["UP", "DOWN", "LEFT", "RIGHT"][direction]
+            up = down = left = right = 0
+            if vision[1][2] != -1:
+                up += 10
+            if vision[3][2] != -1:
+                down += 10
+            if vision[2][1] != -1:
+                left += 10
+            if vision[2][3] != -1:
+                right += 10
 
-        client.publish(f"games/{lobby_name}/{player}/move", step)
+            directions = np.array([up, right, down, left])
+            directions[client.face] += 3
+            directions[(client.face + 1) % 4] += 2
+            directions[(client.face + 3) % 4] += 1
+            client.face = np.argmax(directions)
+            step = ["UP", "RIGHT", "DOWN", "LEFT"][np.argmax(directions)]
+
+            client.publish(f"games/{lobby_name}/{player}/move", step)
 
     # print("message: " + msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
 
@@ -165,8 +174,8 @@ def pathfind():
                 prev[u] = v
                 # if found a coin, break out of loop
                 if vision[u[0]][u[1]] >= 1:
-                    path = pathreconstruction(prev, u)
-                    print(path)
+                    path = pathtranslate(pathreconstruction(prev, u))
+                    # print(path)
                     return path
 
 # path reconstruction between player and nearest coin
@@ -178,6 +187,23 @@ def pathreconstruction(prev, start):
         path.insert(0, start)
     
     return path
+
+# convert coordinates to directions
+def pathtranslate(path):
+    steps = []
+    for x in range(len(path)-1):
+        direction = tuple(map(lambda i, j: i - j, path[x+1], path[x]))
+        match direction:
+            case (-1, 0):
+                steps.append("UP")
+            case (1, 0):
+                steps.append("DOWN")
+            case (0, -1):
+                steps.append("LEFT")
+            case (0, 1):
+                steps.append("RIGHT")
+
+    return steps
 
 if __name__ == "__main__":
     load_dotenv(dotenv_path="./credentials.env")
@@ -231,6 +257,9 @@ if __name__ == "__main__":
         print("STARTING!")
         time.sleep(1) # Wait a second to resolve game start
         client.publish(f"games/{lobby_name}/start", "START")
+
+    client.face = 0
+    client.pathfinding = False
 
     # new thread to receive subscribed messages
     client.loop_forever()
