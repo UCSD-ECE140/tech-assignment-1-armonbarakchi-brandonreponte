@@ -1,6 +1,7 @@
 import os
 import json
 import numpy as np
+import random
 from dotenv import load_dotenv
 
 import paho.mqtt.client as paho
@@ -56,8 +57,36 @@ def on_message(client, userdata, msg):
     """
     if msg.topic == f"games/{lobby_name}/{player}/game_state":
         client.gamestate = json.loads(str(msg.payload)[2:-1])
-        pathfind()
-    print("message: " + msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
+        try:
+            match pathfind()[1]:        # get step from player position
+                case (1,2):
+                    step = "UP"
+                case (3,2):
+                    step = "DOWN"
+                case (2,1):
+                    step = "LEFT"
+                case (2,3):
+                    step = "RIGHT"
+                case _:
+                    pass
+        except:
+            vision = playerVision()
+            up = down = left = right = -25
+            if (vision[1][2] > -1):
+                up = vision[:2,:].sum()
+            if (vision[3][2] > -1):
+                down = vision[3:,:].sum()
+            if (vision[2][1] > -1):
+                left = vision[:,:2].sum()
+            if (vision[2][3] > -1):
+                right = vision[:,3:].sum()
+
+            direction = np.argmax(np.array([up, down, left, right]))
+            step = ["UP", "DOWN", "LEFT", "RIGHT"][direction]
+
+        client.publish(f"games/{lobby_name}/{player}/move", step)
+
+    # print("message: " + msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
 
 # retrieve a map of the player's vision
 def playerVision():
@@ -91,12 +120,19 @@ def playerVision():
     for coin in coins3:
         vision[coin[0] - offset[0]][coin[1] - offset[1]] = 3
 
+    for i in range(-2,3):
+        for j in range(-2,3):
+            absCoord = np.array(client.gamestate["currentPosition"]) + np.array([i,j])
+            if absCoord[0] < 0 or absCoord[0] > 9 or absCoord[1] < 0 or absCoord[1] > 9:
+                vision[absCoord[0] - offset[0]][absCoord[1] - offset[1]] = -1
+
     return vision
 
 # BFS to find nearest coin
 def pathfind():
     # get map of player's vision
     vision = playerVision()
+    print(vision)
     # player at center
     player = (2,2)
     
@@ -129,19 +165,19 @@ def pathfind():
                 prev[u] = v
                 # if found a coin, break out of loop
                 if vision[u[0]][u[1]] >= 1:
-                    pathCurr = u
-                    break
+                    path = pathreconstruction(prev, u)
+                    print(path)
+                    return path
 
-    # path reconstruction
-    path = [pathCurr]
+# path reconstruction between player and nearest coin
+def pathreconstruction(prev, start):
+    path = [start]
     # while there is a previous pointer for the specified coordinate
-    while np.any(pathCurr == prev):
-        pathCurr = prev[pathCurr]
-        path.append(pathCurr)
-
-    # IT IS NOT WORKING
-    print(vision)
-    print(path)
+    while start in prev:
+        start = prev[start]
+        path.insert(0, start)
+    
+    return path
 
 if __name__ == "__main__":
     load_dotenv(dotenv_path="./credentials.env")
@@ -195,16 +231,16 @@ if __name__ == "__main__":
         print("STARTING!")
         time.sleep(1) # Wait a second to resolve game start
         client.publish(f"games/{lobby_name}/start", "START")
-    
-    # new thread to receive subscribed messages
-    client.loop_start()
 
-    # user movement input
-    while True:
-        time.sleep(1) # Wait a second to resolve game state
-        step = input("Enter your move (UP/DOWN/LEFT/RIGHT)? ")
-        if step in ["UP", "DOWN", "LEFT", "RIGHT"]:
-            client.publish(f"games/{lobby_name}/{player}/move", step)
+    # new thread to receive subscribed messages
+    client.loop_forever()
+
+    # # user movement input
+    # while True:
+    #     time.sleep(1) # Wait a second to resolve game state
+    #     step = input("Enter your move (UP/DOWN/LEFT/RIGHT)? ")
+    #     if step in ["UP", "DOWN", "LEFT", "RIGHT"]:
+    #         client.publish(f"games/{lobby_name}/{player}/move", step)
 
 
 
