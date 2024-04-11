@@ -216,6 +216,8 @@ if __name__ == "__main__":
 
     # initialize vision of 10x10 map
     client.map = np.zeros(shape=(10,10)) -1
+    # initialize the path the agent will take
+    client.path = []
 
     # new thread to receive subscribed messages
     client.loop_start()
