@@ -57,43 +57,7 @@ def on_message(client, userdata, msg):
     """
     if msg.topic == f"games/{lobby_name}/{player}/game_state" and client.pathfinding == False:
         client.gamestate = json.loads(str(msg.payload)[2:-1])
-        path = pathfind()
-        print(path)
-
-        if path is not None and len(path) != 0:
-
-            client.pathfinding = True
-
-            while len(path) > 0:
-                step = path.pop(0)
-                client.face = ["UP", "RIGHT", "DOWN", "LEFT"].index(step)
-                print(step)
-                client.publish(f"games/{lobby_name}/{player}/move", step)
-
-            client.pathfinding = False
-
-        else:
-            
-            vision = playerVision()
-
-            up = down = left = right = 0
-            if vision[1][2] != -1:
-                up += 10
-            if vision[3][2] != -1:
-                down += 10
-            if vision[2][1] != -1:
-                left += 10
-            if vision[2][3] != -1:
-                right += 10
-
-            directions = np.array([up, right, down, left])
-            directions[client.face] += 3
-            directions[(client.face + 1) % 4] += 2
-            directions[(client.face + 3) % 4] += 1
-            client.face = np.argmax(directions)
-            step = ["UP", "RIGHT", "DOWN", "LEFT"][np.argmax(directions)]
-
-            client.publish(f"games/{lobby_name}/{player}/move", step)
+        print(playerVision())
 
     # print("message: " + msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
 
@@ -136,74 +100,6 @@ def playerVision():
                 vision[absCoord[0] - offset[0]][absCoord[1] - offset[1]] = -1
 
     return vision
-
-# BFS to find nearest coin
-def pathfind():
-    # get map of player's vision
-    vision = playerVision()
-    print(vision)
-    # player at center
-    player = (2,2)
-    
-    # next to explore
-    frontier = [player]
-    # already explored
-    explored = [player]
-    # previous pointers for path reconstruction
-    prev = {}
-    # path found to nearest coin
-    pathCurr = []
-
-    # BFS loop
-    while len(frontier) != 0:
-        # get next coordinate to explore
-        v = frontier.pop(0)
-        # iterate through all directions
-        for direction in [[-1, 0], [1, 0], [0, -1], [0, 1]]:
-            # coordinate at given direction
-            u = (v[0]+direction[0], v[1]+direction[1])
-            # check if in bound of map
-            if u[0] < 0 or u[0] > 4 or u[1] < 0 or u[1] > 4:
-                continue
-            # if not a wall and not explored
-            if u not in explored and vision[u[0]][u[1]] >= 0:
-                # add to frontier and explored
-                frontier.append(u)
-                explored.append(u)
-                # track previous of this coordinate
-                prev[u] = v
-                # if found a coin, break out of loop
-                if vision[u[0]][u[1]] >= 1:
-                    path = pathtranslate(pathreconstruction(prev, u))
-                    # print(path)
-                    return path
-
-# path reconstruction between player and nearest coin
-def pathreconstruction(prev, start):
-    path = [start]
-    # while there is a previous pointer for the specified coordinate
-    while start in prev:
-        start = prev[start]
-        path.insert(0, start)
-    
-    return path
-
-# convert coordinates to directions
-def pathtranslate(path):
-    steps = []
-    for x in range(len(path)-1):
-        direction = tuple(map(lambda i, j: i - j, path[x+1], path[x]))
-        match direction:
-            case (-1, 0):
-                steps.append("UP")
-            case (1, 0):
-                steps.append("DOWN")
-            case (0, -1):
-                steps.append("LEFT")
-            case (0, 1):
-                steps.append("RIGHT")
-
-    return steps
 
 if __name__ == "__main__":
     load_dotenv(dotenv_path="./credentials.env")
@@ -262,14 +158,14 @@ if __name__ == "__main__":
     client.pathfinding = False
 
     # new thread to receive subscribed messages
-    client.loop_forever()
+    client.loop_start()
 
-    # # user movement input
-    # while True:
-    #     time.sleep(1) # Wait a second to resolve game state
-    #     step = input("Enter your move (UP/DOWN/LEFT/RIGHT)? ")
-    #     if step in ["UP", "DOWN", "LEFT", "RIGHT"]:
-    #         client.publish(f"games/{lobby_name}/{player}/move", step)
+    # user movement input
+    while True:
+        time.sleep(1) # Wait a second to resolve game state
+        step = input("Enter your move (UP/DOWN/LEFT/RIGHT)? ")
+        if step in ["UP", "DOWN", "LEFT", "RIGHT"]:
+            client.publish(f"games/{lobby_name}/{player}/move", step)
 
 
 
