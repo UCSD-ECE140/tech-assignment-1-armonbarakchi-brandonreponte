@@ -260,8 +260,11 @@ def pathreconstruction(prev, start):
 # convert coordinates to directions
 def pathtranslate(path):
     steps = []
+    # iterate over path of coordinates
     for x in range(len(path)-1):
+        # get difference between adjacent coordinates
         direction = tuple(map(lambda i, j: i - j, path[x+1], path[x]))
+        # check relative direction
         match direction:
             case (-1, 0):
                 steps.append("UP")
