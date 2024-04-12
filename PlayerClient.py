@@ -55,7 +55,7 @@ def on_message(client, userdata, msg):
         :param userdata: userdata is set when initiating the client, here it is userdata=None
         :param msg: the message with topic and payload
     """
-    if msg.topic == f"games/{lobby_name}/{player}/game_state" and client.pathfinding == False:
+    if msg.topic == f"games/{lobby_name}/{player}/game_state":
         client.gamestate = json.loads(str(msg.payload)[2:-1])
         print(playerVision())
 
@@ -153,9 +153,6 @@ if __name__ == "__main__":
         print("STARTING!")
         time.sleep(1) # Wait a second to resolve game start
         client.publish(f"games/{lobby_name}/start", "START")
-
-    client.face = 0
-    client.pathfinding = False
 
     # new thread to receive subscribed messages
     client.loop_start()
