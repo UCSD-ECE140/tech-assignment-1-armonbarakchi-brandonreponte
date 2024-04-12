@@ -18,11 +18,31 @@ client2.username_pw_set("beans", "Beans4Life")
 client1.connect("5e411a7e06134539ac30e0ebb5aff733.s1.eu.hivemq.cloud", 8883)
 client2.connect("5e411a7e06134539ac30e0ebb5aff733.s1.eu.hivemq.cloud", 8883)
 
+# with this callback you can see if your publish was successful
+def on_publish(client, userdata, mid, properties=None):
+    """
+        Prints mid to stdout to reassure a successful publish ( used as callback for publish )
+        :param client: the client itself
+        :param userdata: userdata is set when initiating the client, here it is userdata=None
+        :param mid: variable returned from the corresponding publish() call, to allow outgoing messages to be tracked
+        :param properties: can be used in MQTTv5, but is optional
+    """
+    print("mid: " + str(mid), client.random_number)
 
-while True:
-    time.sleep(3)
-    random_number1 = random.randint(1, 100)
-    random_number2 = random.randint(1, 100)
-    client1.publish("challenge1/cool", payload=random_number1, qos=1)
-    client2.publish("challenge1/beans", payload=random_number2, qos=1)
+if __name__ == "__main__":
+    client1.on_publish = on_publish
+    client2.on_publish = on_publish
+
+    client1.loop_start()
+    client2.loop_start()
+
+    client1.random_number = 0
+    client2.random_number = 0
+
+    while True:
+        client1.random_number = random.randint(1, 100)
+        client2.random_number = random.randint(1, 100)
+        client1.publish("challenge1/cool", payload=client1.random_number, qos=1)
+        client2.publish("challenge1/beans", payload=client2.random_number, qos=1)
+        time.sleep(3)
 
